@@ -13,7 +13,7 @@ port = mido.open_output(mido.get_output_names()[0])
 #     print(msg)
 ##########раскомментировать нужную часть
 
-patterns_file = "C:\\Users\\Asus\\Desktop\\Masters\\Проект\\файлы\\patterns.pairs.tsv"
+patterns_file = "test.tsv"
 
 base_for_mel = [[] for i in range(32)]
 
@@ -124,7 +124,7 @@ for j in last_notes:
     track2.append(Message('note_off', note=j, velocity=127, time=int(time), channel=2))
     time = 0
 
-mid.save("C:\\Users\\Asus\\Desktop\\Masters\\Проект\\tmp\\sample3.mid")
+mid.save("../midi/sample3.mid")
 
 
 for msg in mid.play():
