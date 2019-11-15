@@ -2,6 +2,7 @@ import csv
 import numpy as np
 from mido import MidiFile, MidiTrack, Message
 from collections import namedtuple
+import random
 
 # это индексы барабанных инструменты, которые мы по умолчанию подразумеваем
 # определёнными в датасете
@@ -129,9 +130,91 @@ def build_track(drum_bass_pair: DrumMelodyPair,
 
     return midi_file
 
+# создаём класс для конвертации музыкальный пар в массивы numpy и наоборот
+# В классе, соответственно, два метода. При создании класса мы указываем
+# параметры конвертации: размер сетки-изображения и максимальное кол-во голосов
+# в мелодии.
+class Converter:
+    def __init__(self, grid_size = (128, 50), instrument_range = 36):
+        self.grid_size = grid_size
+        self.time_count = grid_size[0]
+        self.drum_range = len(ALLOWED_PITCH_LIST)
+        self.instrument_range = grid_size[1] - self.drum_range
+        if (self.instrument_range <= 0):
+            raise ValueError("Cannot instantiate converter with zero-bandwidth melody channel")
 
-def convert_numpy_image_to_pair(drum_bass_pair: DrumMelodyPair) -> np.array:
-    pass
+    # TODO -- check + test implementation
+    def convert_pair_to_numpy_image(self, drum_bass_pair: DrumMelodyPair) -> np.array:
+        range = self.grid_size
+        pattern_track = np.zeros(self.grid_size)
+        # Step 1. Fill in drum part
+        # precount indexes
+        idx = {}
+        for i in range(len(ALLOWED_PITCH_LIST)):
+            idx[ALLOWED_PITCH_LIST[i]] = i
+        #uniformly distribute drum_pattern on pattern track
+        drum_length = len(drum_bass_pair.drum_pattern)
+        for k in range(drum_length):
+            drum_col = drum_bass_pair.drum_pattern[k]
+            i = int(k * self.time_count / drum_length)
+            for v in drum_col:
+                j = idx[v]
+                pattern_track[i,j] = 1
 
-def convert_pair_to_numpy_image(image: np.array) -> DrumMelodyPair:
-    pass
+        # Step 2. Fill in melody part
+        # find minimum pitch of the melody
+        melody_length = len(drum_bass_pair.melody)
+        min_melody_pitch = None
+        for melody_col in drum_bass_pair.melody:
+            if not melody_col:
+                if not min_melody_pitch:
+                    min_melody_pitch = min(v)
+                min_melody_pitch = min(min_melody_pitch, min(v))
+        # minimum found -- fill in array
+        for k in range(melody_length):
+            melody_col = drum_bass_pair.melody[k]
+            for v in melody_col:
+                j = v - min
+                pattern_track[i, j + self.drum_range] = 1
+
+        return pattern_track
+
+    # does the same, but vice-versa
+    # TODO -- check + test implementation
+    def convert_numpy_image_to_pair(self, image: np.array) -> DrumMelodyPair:
+        # Step 1. Fill in drum part
+        drum_pattern = []
+        for i in range(self.time_count):
+            row = []
+            for j in range(self.drum_range):
+                row.append(image[i, j])
+            drum_pattern.append(row)
+
+        melody_pattern = []
+        rand_min = random.randint(14)  # why not ? :)
+        for i in range(self.time_count):
+            row = []
+            for j in range(self.drum_range, self.drum_range + self.instrument_range):
+                row.append(image[i, j] + rand_min)
+            melody_pattern.append(row)
+        return DrumMelodyPair(drum_pattern, melody_pattern, 120, 1, 1)
+
+# Эту функцию будем использовать для генерирования обучающей выборки
+# Здесь же можно производить аугментацию обучающей выборки, к примеру
+# В качестве аугментации можно использовать транспонирование
+def make_numpy_dataset():
+    # read csv
+    patterns_file = "patterns.pairs.tsv"
+    dataset_with_melody = parse_csv(patterns_file)
+    # initialize converter
+    converter = Converter()
+    # prepare numpy lists
+    dataset_with_melody_np = []
+    dataset_without_melody_np = []
+    for img in dataset_with_melody:
+        img_empty = DrumMelodyPair(img.drum_pattern, None, img.tempo, img.instrument, img.denominator)
+        dataset_with_melody_np.append(converter.convert_pair_to_numpy_image(img))
+        dataset_without_melody_np.append(converter.convert_pair_to_numpy_image(img_empty))
+
+    return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
+
