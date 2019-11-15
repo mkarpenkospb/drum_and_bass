@@ -168,11 +168,12 @@ class Converter:
         for melody_col in drum_bass_pair.melody:
             if not melody_col:
                 if not min_melody_pitch:
-                    min_melody_pitch = min(v)
-                min_melody_pitch = min(min_melody_pitch, min(v))
+                    min_melody_pitch = min(melody_col)
+                min_melody_pitch = min(min_melody_pitch, min(melody_col))
         # minimum found -- fill in array
         for k in range(melody_length):
             melody_col = drum_bass_pair.melody[k]
+            i = int(k * self.time_count / melody_length)
             for v in melody_col:
                 j = v - min
                 pattern_track[i, j + self.drum_range] = 1
