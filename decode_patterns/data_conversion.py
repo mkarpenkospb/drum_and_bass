@@ -145,7 +145,7 @@ class Converter:
 
     # TODO -- check + test implementation
     def convert_pair_to_numpy_image(self, drum_bass_pair: DrumMelodyPair) -> np.array:
-        range = self.grid_size
+        # range = self.grid_size
         pattern_track = np.zeros(self.grid_size)
         # Step 1. Fill in drum part
         # precount indexes
@@ -166,7 +166,9 @@ class Converter:
         melody_length = len(drum_bass_pair.melody)
         min_melody_pitch = None
         for melody_col in drum_bass_pair.melody:
-            if not melody_col:
+            # if not melody_col:
+            #     if not min_melody_pitch:
+            if melody_col:
                 if not min_melody_pitch:
                     min_melody_pitch = min(melody_col)
                 min_melody_pitch = min(min_melody_pitch, min(melody_col))
@@ -175,7 +177,7 @@ class Converter:
             melody_col = drum_bass_pair.melody[k]
             i = int(k * self.time_count / melody_length)
             for v in melody_col:
-                j = v - min
+                j = v - min_melody_pitch
                 pattern_track[i, j + self.drum_range] = 1
 
         return pattern_track
@@ -192,7 +194,7 @@ class Converter:
             drum_pattern.append(row)
 
         melody_pattern = []
-        rand_min = random.randint(14)  # why not ? :)
+        rand_min = random.randint(14) + 24# why not ? :)
         for i in range(self.time_count):
             row = []
             for j in range(self.drum_range, self.drum_range + self.instrument_range):
@@ -218,4 +220,12 @@ def make_numpy_dataset():
         dataset_without_melody_np.append(converter.convert_pair_to_numpy_image(img_empty))
 
     return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
+
+
+if __name__ == '__main__':
+    pairs = parse_csv("test.tsv")
+    a = Converter((128,50))
+    picts = []
+    for i in pairs:
+        picts.append(a.convert_pair_to_numpy_image(i))
 
