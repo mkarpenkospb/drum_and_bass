@@ -1,9 +1,11 @@
 # drum_and_bass
 Карпенко, Крыштапович, НИР 2019
 
-### TODO:
-Integrate this:
-https://github.com/tensorflow/docs/blob/master/site/en/tutorials/generative/cyclegan.ipynb
-
-Google Colab links: 
-https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
+### Задачи:
+1. Разобраться с PyTorch
+2. Создать ffnn сеть 32*14->64*36, преобразующую барабанную партию в бас-партию
+ * Сделать полносвязную нейронную сеть
+ ![](img/photo_2019-12-13_17-05-58.jpg)
+ * Сделать свёрточную нейросеть и сравнить их результаты
+ 
+Не нужно пока что делать много нейронов в сетке :)
