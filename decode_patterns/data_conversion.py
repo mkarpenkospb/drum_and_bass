@@ -1,6 +1,5 @@
 import csv
 import numpy as np
-from mido import MidiFile, MidiTrack, Message
 from collections import namedtuple
 import random
 
@@ -57,6 +56,7 @@ def parse_csv(tsv_file_path: str, limit=1000):
 # по паре мы можем создать проигрываемый midi-файл
 def build_track(drum_bass_pair: DrumMelodyPair,
                 repeats: int = 4, tempo: int = None):
+    from mido import MidiFile, MidiTrack, Message
     # для регулировки темпа используем коэффициент растяжения
     k = 1
     # растягивать будем дефолтную длительность шестнадцатой доли в темпе 120 bpm
@@ -230,6 +230,21 @@ def make_numpy_dataset(img_size = (128, 50), limit = 1000):
         dataset_with_melody_np.append(np_img_dnb)
 
     return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
+
+def make_lstm_dataset(height=128, limit=10000):
+    # read csv
+    patterns_file = "../decode_patterns/patterns.pairs.tsv"
+    dataset_with_melody = parse_csv(patterns_file, limit=limit)
+    # prepare numpy lists
+    drums = []
+    melodies = []
+    converter = Converter((height, 14+36))
+    for img in dataset_with_melody:
+        np_img_dnb = converter.convert_pair_to_numpy_image(img)
+        drums.append(np_img_dnb[:,:14])
+        melodies.append(np_img_dnb[:,14:])
+
+    return np.array(drums), np.array(melodies)
 
 
 if __name__ == '__main__':
