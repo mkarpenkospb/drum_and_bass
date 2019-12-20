@@ -40,7 +40,7 @@ print(hidden)
 
 # define data loader
 # import dataset
-drum, bass = data_conversion.make_lstm_dataset(height=128, limit=250)
+drum, bass = data_conversion.make_lstm_dataset(height=64, limit=6)
 # take 80% to training, other to testing
 L = len(drum)
 idx = np.arange(L) < 0.8*L
@@ -51,7 +51,7 @@ drum_test = drum[np.logical_not(idx)]
 bass_test = bass[np.logical_not(idx)]
 
 def prepare_sequence(seq):
-    return tuple(torch.tensor(seq[i]) for i in range(seq.shape[0]))
+    return tuple(torch.tensor(seq[i], dtype=torch.long) for i in range(seq.shape[0]))
 
 class LSTMBassSequencer(nn.Module):
 
@@ -69,24 +69,28 @@ class LSTMBassSequencer(nn.Module):
 
     def forward(self, drum_line):
         inputs = torch.cat(drum_line).view(len(drum_line), 1, -1)
-        lstm_out, lstm_hidden = self.lstm(inputs)
+        lstm_out, lstm_hidden = self.lstm(inputs.float())
 
         tag_space = self.hidden2bass(lstm_out.view(len(drum_line), -1))
-        tag_scores = torch.sigmoid(tag_space) #F.sigmoid
+        # tag_scores = torch.sigmoid(tag_space) #F.sigmoid
+        tag_scores = F.log_softmax(tag_space, dim=1)
         return tag_scores
 
 model = LSTMBassSequencer(14, 36, 36)
-loss_function = nn.L1Loss()
-optimizer = optim.SGD(model.parameters(), lr=0.1)
+loss_function = nn.NLLLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.1)
 
 # See what the scores are before training
 # Note that element i,j of the output is the score for tag j for word i.
 # Here we don't need to train, so the code is wrapped in torch.no_grad()
 def print_test_result():
     with torch.no_grad():
-        inputs = prepare_sequence(drum_test[0])
+        inputs = prepare_sequence(drum_train[0])
         bass_from_drum = model(inputs)
-        print(bass_from_drum)
+        loss = loss_function(bass_from_drum, torch.tensor(bass_train[0]).long())
+        print(f"Loss: {loss}")
+        for row in bass_from_drum:
+            print(" ".join(map(lambda x: str(float(x)), row)))
 
 print_test_result()
 

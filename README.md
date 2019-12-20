@@ -9,3 +9,12 @@
  * Сделать свёрточную нейросеть и сравнить их результаты
  
 Не нужно пока что делать много нейронов в сетке :)
+
+**Задача 2 -- seq2seq**
+Ключевые слова от Вани:
+1. reconstruction loss
+2. BLEU -- Believel Evaluation Understanding
+3. Perplexity, Entropy
+
+* Final product -- paper: in English!
+* Comparison of the `pix2pix` and `seq2seq`
