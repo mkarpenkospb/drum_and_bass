@@ -209,9 +209,8 @@ class Converter:
 # Эту функцию будем использовать для генерирования обучающей выборки
 # Здесь же можно производить аугментацию обучающей выборки, к примеру
 # В качестве аугментации можно использовать транспонирование
-def make_numpy_dataset(img_size = (128, 50), limit = 1000):
+def make_numpy_dataset(img_size = (128, 50), limit = 1000, patterns_file = "patterns.pairs.tsv"):
     # read csv
-    patterns_file = "patterns.pairs.tsv"
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
     # initialize converter
     converter = Converter(img_size)
@@ -231,9 +230,8 @@ def make_numpy_dataset(img_size = (128, 50), limit = 1000):
 
     return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
 
-def make_lstm_dataset(height=128, limit=10000):
+def make_lstm_dataset(height=128, limit=10000, patterns_file="../decode_patterns/patterns.pairs.tsv"):
     # read csv
-    patterns_file = "../decode_patterns/patterns.pairs.tsv"
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
     # prepare numpy lists
     drums = []
