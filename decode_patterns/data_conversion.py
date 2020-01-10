@@ -80,6 +80,8 @@ def build_track(drum_bass_pair: DrumMelodyPair,
     # этап 1 -- записать в миди-файл барабанную партию
     midi_file = MidiFile(type=1)  # создаём midi-файл
     track = MidiTrack()  # создаём барабанный трек в midi-файле
+    track.append(Message('program_change', program=9, time=0))
+    track.name = "drum track"
     midi_file.tracks.append(track)
 
     time = 0
@@ -93,15 +95,17 @@ def build_track(drum_bass_pair: DrumMelodyPair,
                 continue
 
             for j in i:
-                track.append(Message('note_on', note=j, velocity=127, time=int(time), channel=9))
+                track.append(Message('note_on', note=int(j), velocity=127, time=int(time), channel=9))
                 time = 0
             time = time_quant
 
     # этап 2 -- записать в миди-файл барабанную партию
     track2 = MidiTrack()
+    track2.name = "bass track"
     midi_file.tracks.append(track2)
     # метаинформацией изменяем голос инструмента специальным midi-сообщением
-    track2.append(Message('program_change', program=drum_bass_pair.instrument, time=0, channel=2))
+    #track2.append(Message('program_change', program=drum_bass_pair.instrument, time=0, channel=2))
+    track2.append(Message('program_change', program=34, time=0, channel=2))
 
     time = 0
     repeat = repeats
@@ -115,17 +119,17 @@ def build_track(drum_bass_pair: DrumMelodyPair,
                 continue
 
             for j in last_notes:
-                track2.append(Message('note_off', note=j, velocity=127, time=int(time), channel=2))
+                track2.append(Message('note_off', note=int(j), velocity=127, time=int(time), channel=2))
                 time = 0
             for j in i:
-                track2.append(Message('note_on', note=j, velocity=127, time=int(time), channel=2))
+                track2.append(Message('note_on', note=int(j), velocity=127, time=int(time), channel=2))
                 time = 0
             # все ноты сокращаются в denominator раз
             time = time_quant / drum_bass_pair.denominator
             last_notes = i
 
     for j in last_notes:
-        track2.append(Message('note_off', note=j, velocity=127, time=int(time), channel=2))
+        track2.append(Message('note_off', note=int(j), velocity=127, time=int(time), channel=2))
         time = 0
 
     return midi_file
@@ -190,19 +194,22 @@ class Converter:
     # TODO -- check + test implementation
     def convert_numpy_image_to_pair(self, image: np.array) -> DrumMelodyPair:
         # Step 1. Fill in drum part
+
         drum_pattern = []
         for i in range(self.time_count):
             row = []
             for j in range(self.drum_range):
-                row.append(image[i, j])
+                if image[i, j]:
+                    row.append(ALLOWED_PITCH_LIST[j])
             drum_pattern.append(row)
 
         melody_pattern = []
-        rand_min = random.randint(14) + 24# why not ? :)
+        rand_min = random.randint(0, 15) + 24# why not ? :)
         for i in range(self.time_count):
             row = []
             for j in range(self.drum_range, self.drum_range + self.instrument_range):
-                row.append(image[i, j] + rand_min)
+                if (image[i, j]):
+                    row.append(j - self.drum_range + rand_min)
             melody_pattern.append(row)
         return DrumMelodyPair(drum_pattern, melody_pattern, 120, 1, 1)
 
@@ -230,7 +237,8 @@ def make_numpy_dataset(img_size = (128, 50), limit = 1000, patterns_file = "patt
 
     return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
 
-def make_lstm_dataset(height=128, limit=10000, patterns_file="../decode_patterns/patterns.pairs.tsv"):
+def make_lstm_dataset(height=128, limit=10000, patterns_file="../decode_patterns/patterns.pairs.tsv",
+                      mono=False):
     # read csv
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
     # prepare numpy lists
@@ -240,7 +248,18 @@ def make_lstm_dataset(height=128, limit=10000, patterns_file="../decode_patterns
     for img in dataset_with_melody:
         np_img_dnb = converter.convert_pair_to_numpy_image(img)
         drums.append(np_img_dnb[:,:14])
-        melodies.append(np_img_dnb[:,14:])
+        if mono:
+            melody = np_img_dnb[:, 14:]
+            seq = []
+            for row in melody:
+                idx = np.where(row == 1)[0]
+                if idx.any():
+                    seq.append(idx[0] + 1)
+                else:
+                    seq.append(0)
+            melodies.append(seq)
+        else:
+            melodies.append(np_img_dnb[:,14:])
 
     return np.array(drums), np.array(melodies)
 
