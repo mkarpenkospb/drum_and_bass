@@ -48,7 +48,7 @@ def parse_csv(tsv_file_path: str, limit=1000):
                 if i[0] >= 32 * denominator:
                     continue
                 melody[i[0]].append(i[1])
-
+    # TODO сделать бы их одного размера на выходе из этой функции
             drum_melody_pairs.append(DrumMelodyPair(drum_pattern, melody, tempo, instrument, denominator))
     return drum_melody_pairs
 
@@ -97,7 +97,7 @@ def build_track(drum_bass_pair: DrumMelodyPair,
                 time = 0
             time = time_quant
 
-    # этап 2 -- записать в миди-файл барабанную партию
+    # этап 2 -- записать в миди-файл мелодию
     track2 = MidiTrack()
     midi_file.tracks.append(track2)
     # метаинформацией изменяем голос инструмента специальным midi-сообщением
@@ -155,8 +155,10 @@ class Converter:
         #uniformly distribute drum_pattern on pattern track
         drum_length = len(drum_bass_pair.drum_pattern)
         for k in range(drum_length):
+            # строка из инструментов, которые играют в этот момент
             drum_col = drum_bass_pair.drum_pattern[k]
             i = int(k * self.time_count / drum_length)
+            # перевод в вектор из 14
             for v in drum_col:
                 j = idx[v]
                 if j >= self.drum_range:
@@ -180,6 +182,7 @@ class Converter:
             i = int(k * self.time_count / melody_length)
             for v in melody_col:
                 j = v - min_melody_pitch
+                # обрезует слишком высокие ноты
                 if j >= self.instrument_range:
                     continue
                 pattern_track[i, j + self.drum_range] = 1
@@ -190,28 +193,31 @@ class Converter:
     # TODO -- check + test implementation
     def convert_numpy_image_to_pair(self, image: np.array) -> DrumMelodyPair:
         # Step 1. Fill in drum part
+
         drum_pattern = []
         for i in range(self.time_count):
             row = []
             for j in range(self.drum_range):
-                row.append(image[i, j])
+                if image[i, j]:
+                    row.append(ALLOWED_PITCH_LIST[j])
             drum_pattern.append(row)
 
         melody_pattern = []
-        rand_min = random.randint(14) + 24# why not ? :)
+        rand_min = random.randint(0, 15) + 24# why not ? :)
         for i in range(self.time_count):
             row = []
             for j in range(self.drum_range, self.drum_range + self.instrument_range):
-                row.append(image[i, j] + rand_min)
+                if (image[i, j]):
+                    row.append(j - self.drum_range + rand_min)
             melody_pattern.append(row)
         return DrumMelodyPair(drum_pattern, melody_pattern, 120, 1, 1)
 
 # Эту функцию будем использовать для генерирования обучающей выборки
 # Здесь же можно производить аугментацию обучающей выборки, к примеру
 # В качестве аугментации можно использовать транспонирование
-def make_numpy_dataset(img_size = (128, 50), limit = 1000):
+def make_numpy_dataset(file_name = "patterns_pairs.tsv", img_size = (128, 50), limit = 1000):
     # read csv
-    patterns_file = "patterns.pairs.tsv"
+    patterns_file = file_name
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
     # initialize converter
     converter = Converter(img_size)
@@ -224,16 +230,17 @@ def make_numpy_dataset(img_size = (128, 50), limit = 1000):
         np_img_empty = converter.convert_pair_to_numpy_image(img_empty)
         np_img_dnb = converter.convert_pair_to_numpy_image(img)
         # add color channel
-        np_img_empty = np.stack((np_img_empty,) * 1, axis=-1)
-        np_img_dnb = np.stack((np_img_dnb,) * 1, axis=-1)
+        #np_img_empty = np.stack((np_img_empty,) * 1, axis=-1)
+        #np_img_dnb = np.stack((np_img_dnb,) * 1, axis=-1)
         dataset_without_melody_np.append(np_img_empty)
         dataset_with_melody_np.append(np_img_dnb)
 
     return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
 
-def make_lstm_dataset(height=128, limit=10000):
+def make_lstm_dataset(file_name = "patterns_pairs.tsv", height=128, limit=10000):
     # read csv
-    patterns_file = "../decode_patterns/patterns.pairs.tsv"
+    patterns_file = file_name
+    print(f"file_name={file_name}")
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
     # prepare numpy lists
     drums = []

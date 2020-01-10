@@ -1,12 +1,12 @@
 import mido
 
-from data_conversion import parse_csv, build_track
+from decode_patterns.data_conversion import parse_csv, build_track
 
 
 def main():
     # примерно так мы csv превращаем в (почти) готовый dataset для использования
     # осталось его превратить в пары-картинки для pix2pix и будет замечательно
-    patterns_file = "patterns.pairs.tsv"
+    patterns_file = "../patterns_pairs.tsv"
     dataset_pairs = parse_csv(patterns_file)
 
     # так можно сохранять мидишники в файл
