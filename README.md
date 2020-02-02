@@ -18,3 +18,10 @@
 
 * Final product -- paper: in English!
 * Comparison of the `pix2pix` and `seq2seq`
+
+**Конференция 10.01.2020**
+
+Conditioning -- это добавление сети метаинформации посредством конкатенации к одномерному вектору.
+Неплохо было бы попробовать использоваеть conditioning на
+1. FCNN с автоэнкодером
+2. LSTM
