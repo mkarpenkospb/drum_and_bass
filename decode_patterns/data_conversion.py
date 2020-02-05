@@ -296,7 +296,7 @@ def make_lstm_dataset_conditioning(height=128, limit=10000, patterns_file="../de
                         seq.append(idx[0] + 1)
                     else:
                         seq.append(0)
-                return seq
+                return np.array(seq)
             melodies.append(fmapNumpyImage(convImg, np_img_dnb))
         else:
             # в противном случае мы просто сохраняем мелодию неизменной
