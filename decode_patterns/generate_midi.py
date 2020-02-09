@@ -10,14 +10,15 @@ def main():
     dataset_pairs = parse_csv(patterns_file)
 
     # так можно сохранять мидишники в файл
-    pattern_id = 232
-    mid = build_track(dataset_pairs[pattern_id], tempo=dataset_pairs[pattern_id].tempo)
-    mid.save(f"../midi/sample{pattern_id}.mid")
+    for pair in dataset_pairs:
+        pair.id
+        mid = build_track(pair, tempo=pair.tempo)
+        mid.save(f"../midi/fast_tracks/sample{pair.id}.mid")
 
     # а так можно проигрывать его в наушниках
-    port = mido.open_output(mido.get_output_names()[0])
-    for msg in mid.play():
-        port.send(msg)
+    # port = mido.open_output(mido.get_output_names()[0])
+    # for msg in mid.play():
+    #     port.send(msg)
 
 
 if __name__ == '__main__':
