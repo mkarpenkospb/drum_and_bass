@@ -62,7 +62,7 @@ def parse_csv(tsv_file_path: str, limit=1000) -> List[DrumMelodyPair]:
                 if i[0] >= 32 * denominator:
                     continue
                 melody[i[0]].append(i[1])
-
+    # TODO сделать бы их одного размера на выходе из этой функции
             drum_melody_pairs.append(DrumMelodyPair(drum_pattern, melody, tempo, instrument, denominator))
     return drum_melody_pairs
 
@@ -113,13 +113,12 @@ def build_track(drum_bass_pair: DrumMelodyPair,
                 time = 0
             time = time_quant
 
-    # этап 2 -- записать в миди-файл барабанную партию
+    # этап 2 -- записать в миди-файл мелодию
     track2 = MidiTrack()
     track2.name = "bass track"
     midi_file.tracks.append(track2)
     # метаинформацией изменяем голос инструмента специальным midi-сообщением
-    #track2.append(Message('program_change', program=drum_bass_pair.instrument, time=0, channel=2))
-    track2.append(Message('program_change', program=34, time=0, channel=2))
+    track2.append(Message('program_change', program=drum_bass_pair.instrument, time=0, channel=2))
 
     time = 0
     repeat = repeats
@@ -173,8 +172,10 @@ class Converter:
         #uniformly distribute drum_pattern on pattern track
         drum_length = len(drum_bass_pair.drum_pattern)
         for k in range(drum_length):
+            # строка из инструментов, которые играют в этот момент
             drum_col = drum_bass_pair.drum_pattern[k]
             i = int(k * self.time_count / drum_length)
+            # перевод в вектор из 14
             for v in drum_col:
                 j = idx[v]
                 if j >= self.drum_range:
@@ -198,6 +199,7 @@ class Converter:
             i = int(k * self.time_count / melody_length)
             for v in melody_col:
                 j = v - min_melody_pitch
+                # обрезует слишком высокие ноты
                 if j >= self.instrument_range:
                     continue
                 pattern_track[i, j + self.drum_range] = 1
@@ -255,8 +257,8 @@ def make_numpy_dataset(img_size = (128, 50), limit = 1000, patterns_file = "patt
         np_img_empty = converter.convert_pair_to_numpy_image(img_empty).image
         np_img_dnb = converter.convert_pair_to_numpy_image(img).image
         # add color channel
-        np_img_empty = np.stack((np_img_empty,) * 1, axis=-1)
-        np_img_dnb = np.stack((np_img_dnb,) * 1, axis=-1)
+        #np_img_empty = np.stack((np_img_empty,) * 1, axis=-1)
+        #np_img_dnb = np.stack((np_img_dnb,) * 1, axis=-1)
         dataset_without_melody_np.append(np_img_empty)
         dataset_with_melody_np.append(np_img_dnb)
 
