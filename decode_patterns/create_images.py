@@ -4,7 +4,7 @@ import torch
 from decode_patterns.data_conversion import parse_csv, Converter, make_numpy_dataset
 
 def create_images(file_name = "../patterns_pairs.tsv", img_size = (128, 50), limit=1000):
-    return make_numpy_dataset(file_name = file_name, img_size=img_size, limit=limit)
+    return make_numpy_dataset(patterns_file = file_name, img_size=img_size, limit=limit)
 
 def crop_data(drumnbass):
     bass_only = []
