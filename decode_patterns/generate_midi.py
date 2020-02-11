@@ -12,7 +12,7 @@ def example():
     dataset_pairs = parse_csv(patterns_file)
 
     # так можно сохранять мидишники в файл
-    pattern_id = 232
+    pattern_id = 65536
     mid = build_track(dataset_pairs[pattern_id], tempo=dataset_pairs[pattern_id].tempo)
     mid.save(f"../midi/sample{pattern_id}.mid")
 
@@ -55,7 +55,8 @@ def generate_midi(N = 1000):
         mid.save(f"../midi/npy/sample{i+1}.mid")
 
 def main():
-    generate_midi()
+    example()
+    # generate_midi()
     # example2()
 
 if __name__ == '__main__':
