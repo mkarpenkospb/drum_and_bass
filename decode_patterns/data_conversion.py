@@ -35,14 +35,15 @@ def fmapNumpyImage(f, numpyImage: NumpyImage):
                       , numpyImage.min_note)
 
 
-def parse_csv(tsv_file_path: str, limit=1000) -> List[DrumMelodyPair]:
+def parse_csv(tsv_file_path: str, limit=None) -> List[DrumMelodyPair]:
     drum_melody_pairs = []
     with open(tsv_file_path) as tsvfile:
         tsv_reader = csv.reader(tsvfile, delimiter='\t', quotechar='|')
         for row in tsv_reader:
-            if limit <= 0:
-                return drum_melody_pairs
-            limit -= 1
+            if limit is not None:
+                if limit <= 0:
+                    return drum_melody_pairs
+                limit -= 1
 
             pattern = [
                        np.array([bool(int(i)) for i in j]) for j in
@@ -186,20 +187,23 @@ class Converter:
         # find minimum pitch of the melody
         melody_length = len(drum_bass_pair.melody)
         min_melody_pitch = None
-        for melody_col in drum_bass_pair.melody:
-            # if not melody_col:
-            #     if not min_melody_pitch:
-            if melody_col:
-                if not min_melody_pitch:
-                    min_melody_pitch = min(melody_col)
-                min_melody_pitch = min(min_melody_pitch, min(melody_col))
+        for k in range(melody_length):
+            melody_col = drum_bass_pair.melody[k]
+            for v in melody_col:
+                if min_melody_pitch is None:
+                    min_melody_pitch = v
+                j = v - min_melody_pitch
+                if j < 0:
+                    min_melody_pitch = v
         # minimum found -- fill in array
         for k in range(melody_length):
             melody_col = drum_bass_pair.melody[k]
             i = int(k * self.time_count / melody_length)
             for v in melody_col:
                 j = v - min_melody_pitch
-                # обрезует слишком высокие ноты
+                if j < 0:
+                    print(f"Negative j detected! j:{j}, v:{v}, min_melody_pitch:{min_melody_pitch}")
+                # обрезает слишком высокие ноты
                 if j >= self.instrument_range:
                     continue
                 pattern_track[i, j + self.drum_range] = 1
@@ -243,7 +247,7 @@ class Converter:
 # Эту функцию будем использовать для генерирования обучающей выборки
 # Здесь же можно производить аугментацию обучающей выборки, к примеру
 # В качестве аугментации можно использовать транспонирование
-def make_numpy_dataset(img_size = (128, 50), limit = 1000, patterns_file = "patterns.pairs.tsv"):
+def make_numpy_dataset(img_size = (128, 50), limit = None, patterns_file = "patterns.pairs.tsv"):
     # read csv
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
     # initialize converter
@@ -264,7 +268,7 @@ def make_numpy_dataset(img_size = (128, 50), limit = 1000, patterns_file = "patt
 
     return np.array(dataset_with_melody_np), np.array(dataset_without_melody_np)
 
-def make_lstm_dataset(height=128, limit=10000, patterns_file="../decode_patterns/patterns.pairs.tsv",
+def make_lstm_dataset(height=128, limit = None, patterns_file="../decode_patterns/patterns.pairs.tsv",
                       mono=False):
     drums, melodies = make_lstm_dataset_conditioning(height=height, limit=limit, patterns_file=patterns_file, mono=mono)
     new_drums = []
@@ -276,7 +280,7 @@ def make_lstm_dataset(height=128, limit=10000, patterns_file="../decode_patterns
     return np.array(new_drums), np.array(new_melodies)
 
 
-def make_lstm_dataset_conditioning(height=128, limit=10000, patterns_file="../decode_patterns/patterns.pairs.tsv",
+def make_lstm_dataset_conditioning(height=128, limit = None, patterns_file="../decode_patterns/patterns.pairs.tsv",
                       mono=False):
     # read csv
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
