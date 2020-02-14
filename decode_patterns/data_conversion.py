@@ -19,19 +19,18 @@ MIDO_DEFAULT_QUARTER_LENGTH = 480
 #  - instrument -- инструмент, которым сыграли мелодию
 #  - denominator -- делитель темпа в мелодии (например, если denominator=2, то
 #    длительность при отсчёте долей в мелодии в два раза короче, чем в барабанной партии)
-DrumMelodyPair = namedtuple("DrumMelodyPair", ["drum_pattern", "melody", "tempo", "instrument", "denominator", "id"])
+DrumMelodyPair = namedtuple("DrumMelodyPair", ["drum_pattern", "melody", "tempo", "instrument", "denominator"])
 
 
 def parse_csv(tsv_file_path: str, limit=1000):
     drum_melody_pairs = []
-    id = -1
     with open(tsv_file_path) as tsvfile:
         tsv_reader = csv.reader(tsvfile, delimiter='\t', quotechar='|')
         for row in tsv_reader:
             if limit <= 0:
                 return drum_melody_pairs
             limit -= 1
-            id += 1
+            # удалить инструмент более 128 так как его нет в GeneralMidi
             if int(row[13]) > 128:
                 continue
             pattern = [
@@ -52,8 +51,7 @@ def parse_csv(tsv_file_path: str, limit=1000):
                 if i[0] >= 32 * denominator:
                     continue
                 melody[i[0]].append(i[1])
-    # TODO сделать бы их одного размера на выходе из этой функции
-            drum_melody_pairs.append(DrumMelodyPair(drum_pattern, melody, tempo, instrument, denominator, id))
+            drum_melody_pairs.append(DrumMelodyPair(drum_pattern, melody, tempo, instrument, denominator))
     return drum_melody_pairs
 
 
@@ -139,9 +137,7 @@ def build_track(drum_bass_pair: DrumMelodyPair,
 # параметры конвертации: размер сетки-изображения и максимальное кол-во голосов
 # в мелодии.
 
-# 05.02.2020
-# TODO добавить по grid_size[0] ряд с информацией о роде инструмента,
-# TODO метод будет возвращать сразу бамбук
+
 class Converter:
     def __init__(self, grid_size=(128, 50)):
         self.grid_size = grid_size
@@ -152,8 +148,8 @@ class Converter:
             raise ValueError("Cannot instantiate converter with zero-bandwidth melody channel")
 
     # TODO -- check + test implementation
-    def convert_pair_to_numpy_image(self, drum_bass_pair: DrumMelodyPair) -> np.array:
-        pattern_track = np.zeros(self.grid_size, dtype=np.float32)
+    def convert_pair_to_numpy_image(self, drum_bass_pair: DrumMelodyPair, condition=False) -> np.array:
+        # pattern_track = np.zeros(self.grid_size, dtype=np.float32)
         pattern_drum = np.zeros((self.time_count, self.drum_range))
         pattern_melody = np.zeros((self.time_count, self.instrument_range))
         # Step 1. Fill in drum part
@@ -224,7 +220,7 @@ class Converter:
                 if (image[i, j]):
                     row.append(j - self.drum_range + rand_min)
             melody_pattern.append(row)
-        return DrumMelodyPair(drum_pattern, melody_pattern, 120, 1, 1, 0)
+        return DrumMelodyPair(drum_pattern, melody_pattern, 120, 1, 1)
 
 # Эту функцию будем использовать для генерирования обучающей выборки
 # Здесь же можно производить аугментацию обучающей выборки, к примеру
@@ -240,15 +236,10 @@ def make_numpy_dataset(file_name = "patterns_pairs.tsv", img_size = (128, 50), l
     dataset_melody = []
     tempo = []
     for img in dataset_with_melody:
-        img_empty = DrumMelodyPair(img.drum_pattern, [], img.tempo, img.instrument, img.denominator, img.id)
         np_img_empty, np_img_dnb, t = converter.convert_pair_to_numpy_image(img)
-        # add color channel
-        #np_img_empty = np.stack((np_img_empty,) * 1, axis=-1)
-        #np_img_dnb = np.stack((np_img_dnb,) * 1, axis=-1)
         dataset_drum.append(np_img_empty)
         dataset_melody.append(np_img_dnb)
         tempo.append(t)
-
     return np.array(dataset_drum), np.array(dataset_melody), np.array(tempo)
 
 def make_lstm_dataset(file_name = "patterns_pairs.tsv", height=128, limit=10000):
