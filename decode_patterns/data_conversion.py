@@ -194,12 +194,13 @@ class Converter:
                 pattern_melody[i, j] = 1
         pattern_drum = pattern_drum.reshape(-1)
         pattern_melody = pattern_melody.reshape((1, -1))
-        instrument_info = np.zeros(16)
-        # группировка в соответствии с https://en.wikipedia.org/wiki/General_MIDI
-        instrument_info[drum_bass_pair.instrument // 8] = 1
-        return np.concatenate((pattern_drum, instrument_info)).reshape((1, -1)), \
-               pattern_melody, drum_bass_pair.tempo
-
+        if condition:
+            instrument_info = np.zeros(16)
+            # группировка в соответствии с https://en.wikipedia.org/wiki/General_MIDI
+            instrument_info[drum_bass_pair.instrument // 8] = 1
+            return np.concatenate((pattern_drum, instrument_info)).reshape((1, -1)), \
+                   pattern_melody, drum_bass_pair.tempo
+        return pattern_drum, pattern_melody, (drum_bass_pair.tempo, drum_bass_pair.instrument)
     # does the same, but vice-versa
     # TODO -- check + test implementation
     def convert_numpy_image_to_pair(self, image: np.array) -> DrumMelodyPair:
@@ -225,7 +226,7 @@ class Converter:
 # Эту функцию будем использовать для генерирования обучающей выборки
 # Здесь же можно производить аугментацию обучающей выборки, к примеру
 # В качестве аугментации можно использовать транспонирование
-def make_numpy_dataset(file_name = "patterns_pairs.tsv", img_size = (128, 50), limit = 1000):
+def make_numpy_dataset(file_name = "patterns_pairs.tsv", img_size = (128, 50), limit = 1000, condition=False):
     # read csv
     patterns_file = file_name
     dataset_with_melody = parse_csv(patterns_file, limit=limit)
@@ -234,13 +235,13 @@ def make_numpy_dataset(file_name = "patterns_pairs.tsv", img_size = (128, 50), l
     # prepare numpy lists
     dataset_drum = []
     dataset_melody = []
-    tempo = []
+    meta = []
     for img in dataset_with_melody:
-        np_img_empty, np_img_dnb, t = converter.convert_pair_to_numpy_image(img)
+        np_img_empty, np_img_dnb, t = converter.convert_pair_to_numpy_image(img, condition=condition)
         dataset_drum.append(np_img_empty)
         dataset_melody.append(np_img_dnb)
-        tempo.append(t)
-    return np.array(dataset_drum), np.array(dataset_melody), np.array(tempo)
+        meta.append(t)
+    return np.array(dataset_drum), np.array(dataset_melody), np.array(meta)
 
 def make_lstm_dataset(file_name = "patterns_pairs.tsv", height=128, limit=10000):
     # read csv

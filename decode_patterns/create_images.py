@@ -4,8 +4,9 @@ from sklearn.utils import shuffle
 from decode_patterns.data_conversion import parse_csv, Converter, make_numpy_dataset
 
 
-def create_images(file_name = "../patterns_pairs.tsv", img_size = (128, 50), limit=1000):
-    return make_numpy_dataset(file_name = file_name, img_size=img_size, limit=limit)
+def create_images(file_name="../patterns_pairs.tsv", img_size = (128, 50),
+                  limit=1000, condition=False):
+    return make_numpy_dataset(file_name = file_name, img_size=img_size, limit=limit, condition=condition)
 
 def crop_data(drumnbass):
     bass_only = []
@@ -16,7 +17,7 @@ def crop_data(drumnbass):
     return np.array(drum_only), np.array(bass_only)
 
 
-def train_test(drum, bass, tempo, batch_size, img_size=(128, 50)):
+def train_test(drum, bass, tempo, batch_size, img_size=(128, 50), condition=False):
     limit = len(drum)
     train_size = int(0.8 * limit)
     test_size = limit - train_size
@@ -30,15 +31,18 @@ def train_test(drum, bass, tempo, batch_size, img_size=(128, 50)):
     # shuffe tuples of (drum, bass, train)
     d_train, b_train, t_train = drum[indexes], bass[indexes], tempo[indexes]
     d_train, b_train, t_train = shuffle(d_train, b_train, t_train, random_state=0)
-    train_set = ((torch.tensor(d_train).reshape([-1, batch_size, 1, 14 * img_size[0] + 16]),
-                 torch.tensor(b_train).reshape([-1, batch_size, 1, 36 * img_size[0]])), t_train)
+    drum_size = 14 * img_size[0] + 16 if condition else 14 * img_size[0]
+    melody_size = 36 * img_size[0]
+    train_set = ((torch.tensor(d_train).reshape([-1, batch_size, 1, drum_size]),
+                 torch.tensor(b_train).reshape([-1, batch_size, 1, melody_size])), t_train)
     return train_set, test_set
 
 
 if __name__ == "__main__":
     limit = 10
-    drum, bass, tempo = create_images(limit=limit, img_size=(128, 50))
-    (train_set, train_t), (test_set, test_t) = train_test(drum, bass, tempo, batch_size=2, img_size=(128, 50))
+    drum, bass, meta = create_images(limit=limit, img_size=(128, 50), condition=False)
+    (train_set, train_m), (test_set, test_m) = \
+        train_test(drum, bass, meta, batch_size=2, img_size=(128, 50), condition=False)
     print(train_set[0].size())
     print(test_set[0].size())
 
